@@ -247,7 +247,6 @@ if current_page == "home":
         
         st.markdown(f"### {get_text('feature4_title')}")
         st.markdown(get_text("feature4_desc"))
-
 # AI Assistant Page
 elif current_page == "chat":
     st.markdown(f'<div class="main-header">{get_text("chat_title")}</div>', unsafe_allow_html=True)
@@ -258,17 +257,20 @@ elif current_page == "chat":
         # Display chat history
         chat_container = st.container()
         with chat_container:
-            st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
-            for msg in st.session_state.chat_history:
-                if msg["role"] == "user":
-                    st.markdown(f"**{'You' if st.session_state.language == 'English' else 'أنت'}:** {msg['content']}")
-                else:
-                    st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
-                st.markdown("---")
+            if st.session_state.chat_history:
+                st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
+                for msg in st.session_state.chat_history:
+                    if msg["role"] == "user":
+                        st.markdown(f"**{'You' if st.session_state.language == 'English' else 'أنت'}:** {msg['content']}")
+                    else:
+                        st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
+                    st.markdown("---")
         
-        # Chat input - moved outside the container to prevent rerun issues
+        # Chat input with duplicate prevention
         if prompt := st.chat_input(get_text("chat_placeholder")):
-            if prompt and (not st.session_state.chat_history or prompt != st.session_state.chat_history[-1].get('content', '')):
+            # Prevent duplicate processing
+            if not st.session_state.get('last_prompt') or prompt != st.session_state.last_prompt:
+                st.session_state.last_prompt = prompt
                 st.session_state.chat_history.append({"role": "user", "content": prompt})
                 
                 with st.spinner(get_text("chat_thinking")):
@@ -294,18 +296,20 @@ elif current_page == "chat":
                             """).text
                         
                         st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+                        # Clear the last prompt to allow new questions
+                        st.session_state.last_prompt = None
                         st.rerun()
                         
                     except Exception as e:
                         st.error(get_text("chat_error"))
+                        st.session_state.last_prompt = None
         
         # Clear chat button
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.session_state.chat_history:
-                if st.button(get_text("chat_clear"), use_container_width=True):
-                    st.session_state.chat_history = []
-                    st.rerun()
+        if st.session_state.chat_history:
+            if st.button(get_text("chat_clear"), use_container_width=True):
+                st.session_state.chat_history = []
+                st.session_state.last_prompt = None
+                st.rerun()
 # URL Scanner Page
 elif current_page == "scanner":
     st.markdown(f'<div class="main-header">{get_text("scanner_title")}</div>', unsafe_allow_html=True)
