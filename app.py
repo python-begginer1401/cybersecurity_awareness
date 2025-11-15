@@ -255,56 +255,57 @@ elif current_page == "chat":
     if 'api_key' not in st.session_state:
         st.warning("🔑 " + ("Please enter your Gemini API key in the sidebar" if st.session_state.language == "English" else "الرجاء إدخال مفتاح API في الشريط الجانبي"))
     else:
-        # Chat container
-        with st.container():
-            st.markdown('<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">', unsafe_allow_html=True)
+        # Display chat history
+        chat_container = st.container()
+        with chat_container:
             st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
-            for msg in st.session_state.chat_history[-10:]:
+            for msg in st.session_state.chat_history:
                 if msg["role"] == "user":
                     st.markdown(f"**{'You' if st.session_state.language == 'English' else 'أنت'}:** {msg['content']}")
                 else:
                     st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
                 st.markdown("---")
-            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Chat input
+        # Chat input - moved outside the container to prevent rerun issues
         if prompt := st.chat_input(get_text("chat_placeholder")):
-            st.session_state.chat_history.append({"role": "user", "content": prompt})
-            
-            with st.spinner(get_text("chat_thinking")):
-                try:
-                    genai.configure(api_key=st.session_state.api_key)
-                    model = genai.GenerativeModel("gemini-2.0-flash")
-                    
-                    if st.session_state.language == "English":
-                        response_text = model.generate_content(f"""
-                        As a cybersecurity expert, provide clear, practical advice for this question in English:
+            if prompt and (not st.session_state.chat_history or prompt != st.session_state.chat_history[-1].get('content', '')):
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+                
+                with st.spinner(get_text("chat_thinking")):
+                    try:
+                        genai.configure(api_key=st.session_state.api_key)
+                        model = genai.GenerativeModel("gemini-2.0-flash")
                         
-                        {prompt}
+                        if st.session_state.language == "English":
+                            response_text = model.generate_content(f"""
+                            As a cybersecurity expert, provide clear, practical advice for this question in English:
+                            
+                            {prompt}
+                            
+                            Focus on actionable steps and best practices.
+                            """).text
+                        else:
+                            response_text = model.generate_content(f"""
+                            كخبير في الأمن السيبراني، قدم نصائح عملية وواضحة لهذا السؤال بالعربية:
+                            
+                            {prompt}
+                            
+                            ركز على الخطوات القابلة للتطبيق وأفضل الممارسات.
+                            """).text
                         
-                        Focus on actionable steps and best practices.
-                        """).text
-                    else:
-                        response_text = model.generate_content(f"""
-                        كخبير في الأمن السيبراني، قدم نصائح عملية وواضحة لهذا السؤال بالعربية:
+                        st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+                        st.rerun()
                         
-                        {prompt}
-                        
-                        ركز على الخطوات القابلة للتطبيق وأفضل الممارسات.
-                        """).text
-                    
-                    st.session_state.chat_history.append({"role": "assistant", "content": response_text})
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(get_text("chat_error"))
+                    except Exception as e:
+                        st.error(get_text("chat_error"))
         
         # Clear chat button
-        if st.session_state.chat_history:
-            if st.button(get_text("chat_clear"), use_container_width=True):
-                st.session_state.chat_history = []
-                st.rerun()
-
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.session_state.chat_history:
+                if st.button(get_text("chat_clear"), use_container_width=True):
+                    st.session_state.chat_history = []
+                    st.rerun()
 # URL Scanner Page
 elif current_page == "scanner":
     st.markdown(f'<div class="main-header">{get_text("scanner_title")}</div>', unsafe_allow_html=True)
