@@ -250,13 +250,24 @@ if current_page == "home":
 
 # AI Assistant Page
 elif current_page == "chat":
-    st.markdown(f'<div class="main-header">{get_text("chat_title")}</div>', unsafe_allow_html=True)
+    # Chat container
+with st.container():
+    st.markdown('<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">', unsafe_allow_html=True)
+    st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
+    for msg in st.session_state.chat_history[-10:]:
+        if msg["role"] == "user":
+            st.markdown(f"**{'You' if st.session_state.language == 'English' else 'أنت'}:** {msg['content']}")
+        else:
+            st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
+        st.markdown("---")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     if 'api_key' not in st.session_state:
         st.warning("🔑 " + ("Please enter your Gemini API key in the sidebar" if st.session_state.language == "English" else "الرجاء إدخال مفتاح API في الشريط الجانبي"))
     else:
         # Chat container
-        with st.container(border=True):
+        with st.container():
+    st.markdown('<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">', unsafe_allow_html=True)
             st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
             for msg in st.session_state.chat_history[-10:]:
                 if msg["role"] == "user":
