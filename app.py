@@ -431,27 +431,8 @@ elif current_page == "quiz":
     
     current_questions = questions[st.session_state.language]
     
-    if st.session_state.current_question < len(current_questions):
-        q = current_questions[st.session_state.current_question]
-        
-        st.write(f"**{'Question' if st.session_state.language == 'English' else 'السؤال'} {st.session_state.current_question + 1} {'of' if st.session_state.language == 'English' else 'من'} {len(current_questions)}**")
-        st.write(f"**{q['question']}**")
-        
-        selected = st.radio(
-            "Select your answer:" if st.session_state.language == "English" else "اختر إجابتك:", 
-            q["options"]
-        )
-        
-        if st.button(get_text("quiz_submit"), use_container_width=True):
-            if q["options"].index(selected) == q["correct"]:
-                st.session_state.quiz_score += 1
-                st.success("✅ " + ("Correct! Well done." if st.session_state.language == "English" else "صحيح! أحسنت."))
-            else:
-                st.error("❌ " + ("Incorrect. Better luck next question!" if st.session_state.language == "English" else "غير صحيح. حظاً أوفر في السؤال التالي!"))
-            
-            st.session_state.current_question += 1
-            st.rerun()
-    else:
+    # Check if quiz is completed
+    if st.session_state.current_question >= len(current_questions):
         st.balloons()
         st.success(get_text("quiz_complete").format(score=st.session_state.quiz_score))
         
@@ -465,6 +446,36 @@ elif current_page == "quiz":
         if st.button(get_text("quiz_retake"), use_container_width=True):
             st.session_state.current_question = 0
             st.session_state.quiz_score = 0
+            st.rerun()
+    
+    else:
+        # Show current question
+        q = current_questions[st.session_state.current_question]
+        
+        st.write(f"**{'Question' if st.session_state.language == 'English' else 'السؤال'} {st.session_state.current_question + 1} {'of' if st.session_state.language == 'English' else 'من'} {len(current_questions)}**")
+        st.write(f"**{q['question']}**")
+        
+        # Use a unique key for each question to prevent state issues
+        selected = st.radio(
+            "Select your answer:" if st.session_state.language == "English" else "اختر إجابتك:", 
+            q["options"],
+            key=f"question_{st.session_state.current_question}"
+        )
+        
+        if st.button(get_text("quiz_submit"), use_container_width=True, key=f"submit_{st.session_state.current_question}"):
+            if q["options"].index(selected) == q["correct"]:
+                st.session_state.quiz_score += 1
+                st.success("✅ " + ("Correct! Well done." if st.session_state.language == "English" else "صحيح! أحسنت."))
+            else:
+                correct_answer = q["options"][q["correct"]]
+                st.error(f"❌ {'Incorrect. The correct answer is:' if st.session_state.language == 'English' else 'غير صحيح. الإجابة الصحيحة هي:'} {correct_answer}")
+            
+            # Move to next question
+            st.session_state.current_question += 1
+            
+            # Use a small delay before rerun to show the feedback
+            import time
+            time.sleep(1.5)
             st.rerun()
 
 # Learning Center Page
