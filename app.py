@@ -254,6 +254,12 @@ elif current_page == "chat":
     if 'api_key' not in st.session_state:
         st.warning("🔑 " + ("Please enter your Gemini API key in the sidebar" if st.session_state.language == "English" else "الرجاء إدخال مفتاح API في الشريط الجانبي"))
     else:
+        # Initialize processing state
+        if 'processing' not in st.session_state:
+            st.session_state.processing = False
+        if 'last_processed_prompt' not in st.session_state:
+            st.session_state.last_processed_prompt = ""
+        
         # Display chat history
         if st.session_state.chat_history:
             st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
@@ -264,15 +270,17 @@ elif current_page == "chat":
                     st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
                 st.markdown("---")
         
-        # Chat input with processing state
-        if 'processing' not in st.session_state:
-            st.session_state.processing = False
+        # Chat input - only process if not currently processing and prompt is new
+        prompt = st.chat_input(get_text("chat_placeholder"), disabled=st.session_state.processing)
         
-        if prompt := st.chat_input(get_text("chat_placeholder"), disabled=st.session_state.processing):
-            if not st.session_state.processing:
-                st.session_state.processing = True
-                st.session_state.chat_history.append({"role": "user", "content": prompt})
-                
+        if prompt and not st.session_state.processing and prompt != st.session_state.last_processed_prompt:
+            st.session_state.processing = True
+            st.session_state.last_processed_prompt = prompt
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            
+            # Use a placeholder to show the processing state
+            processing_placeholder = st.empty()
+            with processing_placeholder:
                 with st.spinner(get_text("chat_thinking")):
                     try:
                         genai.configure(api_key=st.session_state.api_key)
@@ -284,7 +292,7 @@ elif current_page == "chat":
                             
                             {prompt}
                             
-                            Focus on actionable steps and best practices.
+                            Focus on actionable steps and best practices. Keep response under 200 words.
                             """).text
                         else:
                             response_text = model.generate_content(f"""
@@ -292,7 +300,7 @@ elif current_page == "chat":
                             
                             {prompt}
                             
-                            ركز على الخطوات القابلة للتطبيق وأفضل الممارسات.
+                            ركز على الخطوات القابلة للتطبيق وأفضل الممارسات. أجب بأقل من 100 كلمة.
                             """).text
                         
                         st.session_state.chat_history.append({"role": "assistant", "content": response_text})
@@ -300,13 +308,17 @@ elif current_page == "chat":
                     except Exception as e:
                         st.error(get_text("chat_error"))
                     finally:
+                        # Clear the processing state and placeholder
+                        processing_placeholder.empty()
                         st.session_state.processing = False
+                        # Force a rerun to show the updated chat
                         st.rerun()
         
         # Clear chat button
         if st.session_state.chat_history:
             if st.button(get_text("chat_clear"), use_container_width=True, disabled=st.session_state.processing):
                 st.session_state.chat_history = []
+                st.session_state.last_processed_prompt = ""
                 st.rerun()
 # URL Scanner Page
 elif current_page == "scanner":
