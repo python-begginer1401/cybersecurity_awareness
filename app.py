@@ -1,5 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # this reads your .env file
+st.session_state.api_key = os.getenv("GEMINI_API_KEY")
 
 # Page configuration
 st.set_page_config(
