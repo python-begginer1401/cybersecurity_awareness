@@ -221,12 +221,7 @@ current_page = page_map[st.session_state.language][selected_page]
 if current_page == "home":
     st.markdown(f'<div class="main-header">{get_text("home_title")}</div>', unsafe_allow_html=True)
     
-    st.markdown(f"""
-    <div class="feature-card">
-        <h3>🛡️ {get_text("home_subtitle")}</h3>
-        <p>{"Learn, practice, and implement cybersecurity best practices to protect your digital life from modern threats." if st.session_state.language == "English" else "تعلم ومارس ونفذ أفضل ممارسات الأمن السيبراني لحماية حياتك الرقمية من التهديدات الحديثة."}</p>
-    </div>
-    """, unsafe_allow_html=True)
+  
     
     # Features Grid
     col1, col2 = st.columns(2)
