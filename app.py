@@ -170,11 +170,6 @@ with st.sidebar:
         st.session_state.current_question = 0
         st.rerun()
     
-    st.markdown("---")
-    
-    # API Key Section
-    
-    
     
     st.markdown("---")
     
