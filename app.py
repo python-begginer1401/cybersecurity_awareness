@@ -173,11 +173,8 @@ with st.sidebar:
     st.markdown("---")
     
     # API Key Section
-    st.markdown(f"**{get_text('api_section')}**")
-    api_key = st.text_input("API Key", type="password", label_visibility="collapsed", placeholder=get_text("api_placeholder"))
-    if api_key:
-        st.session_state.api_key = api_key
-        st.success(get_text("api_success"))
+    
+    
     
     st.markdown("---")
     
