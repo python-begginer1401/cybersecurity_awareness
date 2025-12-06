@@ -466,7 +466,7 @@ elif current_page == "quiz":
             
             # Use a small delay before rerun to show the feedback
             import time
-            time.sleep(1. 5)
+            time.sleep(1.5)
             st.rerun()
 
 # Learning Center Page
