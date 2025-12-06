@@ -2,8 +2,9 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# Get API key from environment variable (set by GitHub Actions)
-st.session_state.api_key = os.getenv("API_KEY")
+
+# Get API key from Streamlit secrets
+st.session_state.api_key = st.secrets.get("API_KEY")
 
 # Page configuration
 st.set_page_config(
