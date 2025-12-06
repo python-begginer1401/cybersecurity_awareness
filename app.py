@@ -1,10 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 
-load_dotenv()  # this reads your .env file
-st.session_state.api_key = os.getenv("GEMINI_API_KEY")
+# Get API key from environment variable (set by GitHub Actions)
+st.session_state.api_key = os.getenv("API_KEY")
 
 # Page configuration
 st.set_page_config(
@@ -35,7 +34,7 @@ TEXTS = {
         "api_success": "✓ API Key configured",
         "navigation": "🧭 Navigation",
         "progress": "📊 Your Progress",
-        "footer": "Stay secure. Stay informed.",
+        "footer": "Stay secure.  Stay informed.",
         "home_title": "Cybersecurity Awareness Platform",
         "home_subtitle": "Complete Digital Protection Platform",
         "feature1_title": "🤖 AI Security Assistant",
@@ -47,10 +46,10 @@ TEXTS = {
         "feature4_title": "📚 Learning Resources",
         "feature4_desc": "Access comprehensive guides and best practices",
         "chat_title": "🤖 AI Security Assistant",
-        "chat_placeholder": "Ask about cybersecurity...",
+        "chat_placeholder": "Ask about cybersecurity.. .",
         "chat_clear": "Clear Chat",
         "chat_thinking": "Analyzing your question...",
-        "chat_error": "Failed to get response. Please check your API key.",
+        "chat_error": "Failed to get response.  Please check your API key.",
         "scanner_title": "🔗 URL Security Scanner",
         "scanner_placeholder": "Enter URL to scan...",
         "scanner_button": "🔍 Scan URL Security",
@@ -62,7 +61,7 @@ TEXTS = {
         "quiz_title": "📝 Cybersecurity Knowledge Assessment",
         "quiz_submit": "Submit Answer",
         "quiz_retake": "Retake Assessment",
-        "quiz_complete": "🎉 Assessment Complete! Score: {score}/3",
+        "quiz_complete": "🎉 Assessment Complete!  Score: {score}/3",
         "quiz_perfect": "**Perfect!** You have excellent cybersecurity knowledge!",
         "quiz_good": "**Good job!** You have solid cybersecurity awareness.",
         "quiz_improve": "**Keep learning!** Review the learning center to improve your knowledge.",
@@ -103,12 +102,12 @@ TEXTS = {
         "scanner_analyzing": "🔎 جاري تحليل الرابط للكشف عن التهديدات...",
         "scanner_success": "✅ اكتمل التحليل الأمني",
         "scanner_report": "التقرير الأمني",
-        "scanner_error": "❌ فشل التحليل. يرجى التحقق من مفتاح API.",
+        "scanner_error": "❌ فشل التحليل.  يرجى التحقق من مفتاح API.",
         "scanner_warning": "⚠️ الرجاء إدخال رابط للمسح",
         "quiz_title": "📝 اختبار المعرفة بالأمن السيبراني",
         "quiz_submit": "إرسال الإجابة",
         "quiz_retake": "أعد التقييم",
-        "quiz_complete": "🎉 اكتمل التقييم! النتيجة: {score}/3",
+        "quiz_complete": "🎉 اكتمل التقييم!  النتيجة: {score}/3",
         "quiz_perfect": "**ممتاز!** لديك معرفة ممتازة بالأمن السيبراني!",
         "quiz_good": "**عمل جيد!** لديك وعي قوي بالأمن السيبراني.",
         "quiz_improve": "**استمر في التعلم!** راجع مركز التعلم لتحسين معرفتك.",
@@ -122,7 +121,7 @@ TEXTS = {
 
 def get_text(key):
     """Get text in current language"""
-    return TEXTS[st.session_state.language].get(key, key)
+    return TEXTS[st.session_state.language]. get(key, key)
 
 # Custom CSS for better styling
 st.markdown("""
@@ -134,7 +133,7 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .feature-card {
+    . feature-card {
         background-color: #f0f2f6;
         padding: 1.5rem;
         border-radius: 10px;
@@ -166,9 +165,9 @@ with st.sidebar:
     if language != st.session_state.language:
         st.session_state.language = language
         st.session_state.chat_history = []
-        st.session_state.quiz_score = 0
+        st.session_state. quiz_score = 0
         st.session_state.current_question = 0
-        st.rerun()
+        st. rerun()
     
     
     st.markdown("---")
@@ -221,8 +220,6 @@ current_page = page_map[st.session_state.language][selected_page]
 if current_page == "home":
     st.markdown(f'<div class="main-header">{get_text("home_title")}</div>', unsafe_allow_html=True)
     
-  
-    
     # Features Grid
     col1, col2 = st.columns(2)
     
@@ -239,12 +236,13 @@ if current_page == "home":
         
         st.markdown(f"### {get_text('feature4_title')}")
         st.markdown(get_text("feature4_desc"))
+
 # AI Assistant Page
 elif current_page == "chat":
     st.markdown(f'<div class="main-header">{get_text("chat_title")}</div>', unsafe_allow_html=True)
     
-    if 'api_key' not in st.session_state:
-        st.warning("🔑 " + ("Please enter your Gemini API key in the sidebar" if st.session_state.language == "English" else "الرجاء إدخال مفتاح API في الشريط الجانبي"))
+    if not st.session_state.api_key:
+        st.warning("🔑 " + ("Please configure API_KEY in GitHub Secrets" if st.session_state.language == "English" else "الرجاء تكوين API_KEY في GitHub Secrets"))
     else:
         # Initialize processing state
         if 'processing' not in st.session_state:
@@ -255,11 +253,11 @@ elif current_page == "chat":
         # Display chat history
         if st.session_state.chat_history:
             st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
-            for msg in st.session_state.chat_history:
+            for msg in st.session_state. chat_history:
                 if msg["role"] == "user":
                     st.markdown(f"**{'You' if st.session_state.language == 'English' else 'أنت'}:** {msg['content']}")
                 else:
-                    st.markdown(f"**{'Assistant' if st.session_state.language == 'English' else 'المساعد'}:** {msg['content']}")
+                    st.markdown(f"**{'Assistant' if st.session_state. language == 'English' else 'المساعد'}:** {msg['content']}")
                 st.markdown("---")
         
         # Chat input - only process if not currently processing and prompt is new
@@ -267,7 +265,7 @@ elif current_page == "chat":
         
         if prompt and not st.session_state.processing and prompt != st.session_state.last_processed_prompt:
             st.session_state.processing = True
-            st.session_state.last_processed_prompt = prompt
+            st.session_state. last_processed_prompt = prompt
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             
             # Use a placeholder to show the processing state
@@ -275,7 +273,7 @@ elif current_page == "chat":
             with processing_placeholder:
                 with st.spinner(get_text("chat_thinking")):
                     try:
-                        genai.configure(api_key=st.session_state.api_key)
+                        genai. configure(api_key=st.session_state.api_key)
                         model = genai.GenerativeModel("gemini-2.0-flash")
                         
                         if st.session_state.language == "English":
@@ -284,8 +282,8 @@ elif current_page == "chat":
                             
                             {prompt}
                             
-                            Focus on actionable steps and best practices. Keep response under 200 words.
-                            """).text
+                            Focus on actionable steps and best practices.  Keep response under 200 words.
+                            """). text
                         else:
                             response_text = model.generate_content(f"""
                             كخبير في الأمن السيبراني، قدم نصائح عملية وواضحة لهذا السؤال بالعربية:
@@ -295,7 +293,7 @@ elif current_page == "chat":
                             ركز على الخطوات القابلة للتطبيق وأفضل الممارسات. أجب بأقل من 100 كلمة.
                             """).text
                         
-                        st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+                        st.session_state. chat_history.append({"role": "assistant", "content": response_text})
                         
                     except Exception as e:
                         st.error(get_text("chat_error"))
@@ -312,12 +310,13 @@ elif current_page == "chat":
                 st.session_state.chat_history = []
                 st.session_state.last_processed_prompt = ""
                 st.rerun()
+
 # URL Scanner Page
 elif current_page == "scanner":
     st.markdown(f'<div class="main-header">{get_text("scanner_title")}</div>', unsafe_allow_html=True)
     
-    if 'api_key' not in st.session_state:
-        st.warning("🔑 " + ("Please enter your Gemini API key in the sidebar" if st.session_state.language == "English" else "الرجاء إدخال مفتاح API في الشريط الجانبي"))
+    if not st.session_state.api_key:
+        st.warning("🔑 " + ("Please configure API_KEY in GitHub Secrets" if st.session_state.language == "English" else "الرجاء تكوين API_KEY في GitHub Secrets"))
     else:
         url = st.text_input(
             "Enter URL to scan:" if st.session_state.language == "English" else "أدخل الرابط للمسح:", 
@@ -328,17 +327,17 @@ elif current_page == "scanner":
             if url:
                 with st.spinner(get_text("scanner_analyzing")):
                     try:
-                        genai.configure(api_key=st.session_state.api_key)
-                        model = genai.GenerativeModel("gemini-2.0-flash")
+                        genai. configure(api_key=st. session_state.api_key)
+                        model = genai. GenerativeModel("gemini-2.0-flash")
                         
                         if st.session_state.language == "English":
-                            response_text = model.generate_content(f"""
-                            Briefly check if this URL is safe: {url}. Answer in 2-3 sentences.
+                            response_text = model. generate_content(f"""
+                            Briefly check if this URL is safe: {url}.  Answer in 2-3 sentences.
                             """).text
                         else:
                             response_text = model.generate_content(f"""
-                            "تحقق باختصار مما إذا كان هذا الرابط آمناً: {url}. أجب في 2-3 جمل."
-                            """).text
+                            تحقق باختصار مما إذا كان هذا الرابط آمناً: {url}. أجب في 2-3 جمل.
+                            """). text
                         
                         st.success(get_text("scanner_success"))
                         st.markdown(f"### {get_text('scanner_report')}")
@@ -426,7 +425,7 @@ elif current_page == "quiz":
     # Check if quiz is completed
     if st.session_state.current_question >= len(current_questions):
         st.balloons()
-        st.success(get_text("quiz_complete").format(score=st.session_state.quiz_score))
+        st.success(get_text("quiz_complete"). format(score=st.session_state.quiz_score))
         
         if st.session_state.quiz_score == len(current_questions):
             st.success(get_text("quiz_perfect"))
@@ -436,15 +435,15 @@ elif current_page == "quiz":
             st.info(get_text("quiz_improve"))
         
         if st.button(get_text("quiz_retake"), use_container_width=True):
-            st.session_state.current_question = 0
+            st.session_state. current_question = 0
             st.session_state.quiz_score = 0
-            st.rerun()
+            st. rerun()
     
     else:
         # Show current question
         q = current_questions[st.session_state.current_question]
         
-        st.write(f"**{'Question' if st.session_state.language == 'English' else 'السؤال'} {st.session_state.current_question + 1} {'of' if st.session_state.language == 'English' else 'من'} {len(current_questions)}**")
+        st.write(f"**{'Question' if st.session_state.language == 'English' else 'السؤال'} {st.session_state.current_question + 1} {'of' if st.session_state. language == 'English' else 'من'} {len(current_questions)}**")
         st.write(f"**{q['question']}**")
         
         # Use a unique key for each question to prevent state issues
@@ -455,19 +454,19 @@ elif current_page == "quiz":
         )
         
         if st.button(get_text("quiz_submit"), use_container_width=True, key=f"submit_{st.session_state.current_question}"):
-            if q["options"].index(selected) == q["correct"]:
-                st.session_state.quiz_score += 1
-                st.success("✅ " + ("Correct! Well done." if st.session_state.language == "English" else "صحيح! أحسنت."))
+            if q["options"]. index(selected) == q["correct"]:
+                st. session_state.quiz_score += 1
+                st.success("✅ " + ("Correct!  Well done." if st.session_state.language == "English" else "صحيح! أحسنت. "))
             else:
                 correct_answer = q["options"][q["correct"]]
-                st.error(f"❌ {'Incorrect. The correct answer is:' if st.session_state.language == 'English' else 'غير صحيح. الإجابة الصحيحة هي:'} {correct_answer}")
+                st.error(f"❌ {'Incorrect.  The correct answer is:' if st.session_state. language == 'English' else 'غير صحيح. الإجابة الصحيحة هي:'} {correct_answer}")
             
             # Move to next question
             st.session_state.current_question += 1
             
             # Use a small delay before rerun to show the feedback
             import time
-            time.sleep(1.5)
+            time.sleep(1. 5)
             st.rerun()
 
 # Learning Center Page
@@ -501,7 +500,7 @@ elif current_page == "learn":
             - Don't open unexpected attachments
             """)
         
-        with st.expander(get_text("browsing_title")):
+        with st. expander(get_text("browsing_title")):
             st.markdown("""
             **Secure Browsing:**
             - Always look for HTTPS in URLs
@@ -512,7 +511,7 @@ elif current_page == "learn":
             """)
         
         with st.expander(get_text("general_title")):
-            st.markdown("""
+            st. markdown("""
             **Device Security:**
             - Keep operating systems updated
             - Install reputable antivirus software
