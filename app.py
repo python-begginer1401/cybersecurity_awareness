@@ -1,15 +1,42 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
+import json
+import os
 
 # =========================
-#  API KEY & FALLBACKS
+#  OPENROUTER CONFIG
 # =========================
 
-# Get API key from Streamlit secrets
-st.session_state.api_key = st.secrets.get("API_KEY")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct"  # Llama via OpenRouter
+
+def call_openrouter(messages, temperature=0.3):
+    api_key = st.secrets.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("No OPENROUTER_API_KEY in Streamlit secrets")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        # optional metadata
+        "HTTP-Referer": "https://cybersecurityawareness.streamlit.app",  # or your app URL
+        "X-Title": "Cybersecurity Awareness Platform",
+    }
+
+    data = {
+        "model": OPENROUTER_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+    }
+
+    resp = requests.post(OPENROUTER_URL, headers=headers, data=json.dumps(data))
+    resp.raise_for_status()
+    out = resp.json()
+    return out["choices"][0]["message"]["content"]
+
 
 def fallback_answer(prompt, language):
-    """Fallback text if Gemini call fails."""
+    """Fallback text if OpenRouter call fails."""
     if language == "English":
         return (
             "The live AI service is temporarily unavailable, so here is a general answer:\n\n"
@@ -33,7 +60,7 @@ st.set_page_config(
     page_title="Cybersecurity Awareness Platform",
     page_icon="🔒",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Initialize session state
@@ -45,6 +72,10 @@ if "quiz_score" not in st.session_state:
     st.session_state.quiz_score = 0
 if "current_question" not in st.session_state:
     st.session_state.current_question = 0
+if "processing" not in st.session_state:
+    st.session_state.processing = False
+if "last_processed_prompt" not in st.session_state:
+    st.session_state.last_processed_prompt = ""
 
 # =========================
 #  TEXT DICTIONARY
@@ -56,7 +87,7 @@ TEXTS = {
         "sidebar_title": "🔒 Cybersecurity Awareness",
         "language_label": "🌐 Language",
         "api_section": "🔑 API Configuration",
-        "api_placeholder": "Enter your Gemini API key",
+        "api_placeholder": "Enter your Gemini API key",  # text only, can rename later
         "api_success": "✓ API Key configured",
         "navigation": "🧭 Navigation",
         "progress": "📊 Your Progress",
@@ -75,14 +106,14 @@ TEXTS = {
         "chat_placeholder": "Ask about cybersecurity...",
         "chat_clear": "Clear Chat",
         "chat_thinking": "Analyzing your question...",
-        "chat_error": "Failed to get response. Please check your API key.",
+        "chat_error": "Failed to get response.",
         "scanner_title": "🔗 URL Security Scanner",
         "scanner_placeholder": "Enter URL to scan...",
         "scanner_button": "🔍 Scan URL Security",
         "scanner_analyzing": "🔎 Analyzing URL for security threats...",
         "scanner_success": "✅ Security Analysis Complete",
         "scanner_report": "Security Report",
-        "scanner_error": "❌ Analysis failed. Please check your API key.",
+        "scanner_error": "❌ Analysis failed.",
         "scanner_warning": "⚠️ Please enter a URL to scan",
         "quiz_title": "📝 Cybersecurity Knowledge Assessment",
         "quiz_submit": "Submit Answer",
@@ -95,7 +126,7 @@ TEXTS = {
         "password_title": "🔐 Password Security Best Practices",
         "email_title": "📧 Email Security & Phishing Protection",
         "browsing_title": "🌐 Safe Web Browsing Habits",
-        "general_title": "🛡️ General Security Tips"
+        "general_title": "🛡️ General Security Tips",
     },
     "Arabic": {
         "title": "منصة التوعية بالأمن السيبراني",
@@ -121,14 +152,14 @@ TEXTS = {
         "chat_placeholder": "اسأل عن الأمن السيبراني...",
         "chat_clear": "مسح المحادثة",
         "chat_thinking": "جاري تحليل سؤالك...",
-        "chat_error": "فشل في الحصول على الرد. يرجى التحقق من مفتاح API.",
+        "chat_error": "فشل في الحصول على الرد.",
         "scanner_title": "🔗 ماسح أمان الروابط",
         "scanner_placeholder": "أدخل الرابط للمسح...",
         "scanner_button": "🔍 مسح أمان الرابط",
         "scanner_analyzing": "🔎 جاري تحليل الرابط للكشف عن التهديدات...",
         "scanner_success": "✅ اكتمل التحليل الأمني",
         "scanner_report": "التقرير الأمني",
-        "scanner_error": "❌ فشل التحليل. يرجى التحقق من مفتاح API.",
+        "scanner_error": "❌ فشل التحليل.",
         "scanner_warning": "⚠️ الرجاء إدخال رابط للمسح",
         "quiz_title": "📝 اختبار المعرفة بالأمن السيبراني",
         "quiz_submit": "إرسال الإجابة",
@@ -141,8 +172,8 @@ TEXTS = {
         "password_title": "🔐 أفضل ممارسات أمان كلمات المرور",
         "email_title": "📧 أمان البريد الإلكتروني والحماية من التصيد",
         "browsing_title": "🌐 عادات التصفح الآمن للويب",
-        "general_title": "🛡️ نصائح أمنية عامة"
-    }
+        "general_title": "🛡️ نصائح أمنية عامة",
+    },
 }
 
 def get_text(key: str) -> str:
@@ -276,12 +307,6 @@ if current_page == "home":
 elif current_page == "chat":
     st.markdown(f'<div class="main-header">{get_text("chat_title")}</div>', unsafe_allow_html=True)
 
-    # Initialize processing state
-    if "processing" not in st.session_state:
-        st.session_state.processing = False
-    if "last_processed_prompt" not in st.session_state:
-        st.session_state.last_processed_prompt = ""
-
     # Display chat history
     if st.session_state.chat_history:
         st.markdown("💬 " + ("Conversation" if st.session_state.language == "English" else "المحادثة"))
@@ -306,37 +331,25 @@ elif current_page == "chat":
         with processing_placeholder:
             with st.spinner(get_text("chat_thinking")):
                 try:
-                    # Try real Gemini call
-                    if st.session_state.api_key:
-                        genai.configure(api_key=st.session_state.api_key)
-                        model = genai.GenerativeModel("gemini-1.5-flash")
-
-                        if st.session_state.language == "English":
-                            response_text = model.generate_content(
-                                f"""
-                                As a cybersecurity expert, provide clear, practical advice for this question in English:
-
-                                {prompt}
-
-                                Focus on actionable steps and best practices. Keep response under 200 words.
-                                """
-                            ).text
-                        else:
-                            response_text = model.generate_content(
-                                f"""
-                                كخبير في الأمن السيبراني، قدم نصائح عملية وواضحة لهذا السؤال بالعربية:
-
-                                {prompt}
-
-                                ركز على الخطوات القابلة للتطبيق وأفضل الممارسات. أجب بأقل من 100 كلمة.
-                                """
-                            ).text
+                    if st.session_state.language == "English":
+                        user_text = (
+                            "You are a cybersecurity expert. Give clear, practical advice in under 200 words.\n\n"
+                            f"User question: {prompt}"
+                        )
                     else:
-                        # No key at all -> fallback
-                        response_text = fallback_answer(prompt, st.session_state.language)
+                        user_text = (
+                            "أنت خبير في الأمن السيبراني. قدم نصائح عملية وواضحة بأقل من 100 كلمة.\n\n"
+                            f"سؤال المستخدم: {prompt}"
+                        )
+
+                    response_text = call_openrouter(
+                        [
+                            {"role": "system", "content": "You are a helpful cybersecurity assistant."},
+                            {"role": "user", "content": user_text},
+                        ]
+                    )
 
                 except Exception:
-                    # Any error -> fallback so app still looks functional
                     response_text = fallback_answer(prompt, st.session_state.language)
 
         st.session_state.chat_history.append({"role": "assistant", "content": response_text})
@@ -360,44 +373,29 @@ elif current_page == "scanner":
 
     url = st.text_input(
         "Enter URL to scan:" if st.session_state.language == "English" else "أدخل الرابط للمسح:",
-        placeholder="youtube.com",  # your example
+        placeholder="youtube.com",
     )
 
     if st.button(get_text("scanner_button"), use_container_width=True, type="primary"):
         if url:
             with st.spinner(get_text("scanner_analyzing")):
                 try:
-                    if st.session_state.api_key:
-                        genai.configure(api_key=st.session_state.api_key)
-                        model = genai.GenerativeModel("gemini-1.5-flash")
-
-                        if st.session_state.language == "English":
-                            response_text = model.generate_content(
-                                f"Briefly check if this URL is safe: {url}. Answer in 2-3 sentences."
-                            ).text
-                        else:
-                            response_text = model.generate_content(
-                                f"تحقق باختصار مما إذا كان هذا الرابط آمناً: {url}. أجب في 2-3 جمل."
-                            ).text
+                    if st.session_state.language == "English":
+                        user_msg = f"Briefly check if this URL is safe: {url}. Answer in 2–3 sentences."
                     else:
-                        # No key -> fallback
-                        if st.session_state.language == "English":
-                            response_text = (
-                                f"This is a simulated analysis (live AI unavailable).\n\n"
-                                f"- URL entered: {url}\n"
-                                f"- Always check for HTTPS, avoid suspicious pop-ups, and never enter "
-                                f"passwords on pages you don't fully trust."
-                            )
-                        else:
-                            response_text = (
-                                f"هذا تحليل تجريبي (خدمة الذكاء الاصطناعي الحية غير متوفرة).\n\n"
-                                f"- الرابط المدخل: {url}\n"
-                                f"- تأكد دائماً من وجود HTTPS، وتجنب النوافذ المنبثقة المشبوهة، "
-                                f"ولا تُدخل كلمات المرور في صفحات لا تثق بها تماماً."
-                            )
+                        user_msg = f"تحقق باختصار مما إذا كان هذا الرابط آمناً: {url}. أجب في 2-3 جمل."
+
+                    response_text = call_openrouter(
+                        [
+                            {
+                                "role": "system",
+                                "content": "You are a cybersecurity expert that evaluates URLs for safety.",
+                            },
+                            {"role": "user", "content": user_msg},
+                        ]
+                    )
 
                 except Exception:
-                    # Any error -> fallback
                     if st.session_state.language == "English":
                         response_text = (
                             f"This is a simulated analysis (live AI unavailable).\n\n"
@@ -527,7 +525,11 @@ elif current_page == "quiz":
             key=f"question_{st.session_state.current_question}",
         )
 
-        if st.button(get_text("quiz_submit"), use_container_width=True, key=f"submit_{st.session_state.current_question}"):
+        if st.button(
+            get_text("quiz_submit"),
+            use_container_width=True,
+            key=f"submit_{st.session_state.current_question}",
+        ):
             if q["options"].index(selected) == q["correct"]:
                 st.session_state.quiz_score += 1
                 st.success(
@@ -557,115 +559,115 @@ elif current_page == "learn":
         with st.expander(get_text("password_title"), expanded=True):
             st.markdown(
                 """
-            **Create Strong Passwords:**
-            - Use at least 12 characters
-            - Mix uppercase and lowercase letters
-            - Include numbers and symbols
-            - Avoid personal information
-            - Don't use dictionary words
+**Create Strong Passwords:**
+- Use at least 12 characters
+- Mix uppercase and lowercase letters
+- Include numbers and symbols
+- Avoid personal information
+- Don't use dictionary words
 
-            **Password Management:**
-            - Use a reputable password manager
-            - Enable two-factor authentication
-            - Never reuse passwords across sites
-            - Change passwords after security breaches
-            """
+**Password Management:**
+- Use a reputable password manager
+- Enable two-factor authentication
+- Never reuse passwords across sites
+- Change passwords after security breaches
+"""
             )
 
         with st.expander(get_text("email_title")):
             st.markdown(
                 """
-            **Identify Phishing Attempts:**
-            - Check sender email addresses carefully
-            - Look for spelling and grammar errors
-            - Be wary of urgent or threatening language
-            - Hover over links to see actual URLs
-            - Don't open unexpected attachments
-            """
+**Identify Phishing Attempts:**
+- Check sender email addresses carefully
+- Look for spelling and grammar errors
+- Be wary of urgent or threatening language
+- Hover over links to see actual URLs
+- Don't open unexpected attachments
+"""
             )
 
         with st.expander(get_text("browsing_title")):
             st.markdown(
                 """
-            **Secure Browsing:**
-            - Always look for HTTPS in URLs
-            - Keep browsers and extensions updated
-            - Use ad blockers and anti-tracking
-            - Avoid public WiFi for sensitive activities
-            - Clear cookies and cache regularly
-            """
+**Secure Browsing:**
+- Always look for HTTPS in URLs
+- Keep browsers and extensions updated
+- Use ad blockers and anti-tracking
+- Avoid public WiFi for sensitive activities
+- Clear cookies and cache regularly
+"""
             )
 
         with st.expander(get_text("general_title")):
             st.markdown(
                 """
-            **Device Security:**
-            - Keep operating systems updated
-            - Install reputable antivirus software
-            - Use firewalls
-            - Backup data regularly
+**Device Security:**
+- Keep operating systems updated
+- Install reputable antivirus software
+- Use firewalls
+- Backup data regularly
 
-            **Online Behavior:**
-            - Be cautious with social media sharing
-            - Monitor financial statements
-            - Stay informed about new threats
-            """
+**Online Behavior:**
+- Be cautious with social media sharing
+- Monitor financial statements
+- Stay informed about new threats
+"""
             )
     else:
         with st.expander(get_text("password_title"), expanded=True):
             st.markdown(
                 """
-            **إنشاء كلمات مرور قوية:**
-            - استخدم 12 حرفاً على الأقل
-            - اخلط بين الأحرف الكبيرة والصغيرة
-            - أضف أرقاماً ورموزاً
-            - تجنب المعلومات الشخصية
-            - لا تستخدم كلمات من القاموس
+**إنشاء كلمات مرور قوية:**
+- استخدم 12 حرفاً على الأقل
+- اخلط بين الأحرف الكبيرة والصغيرة
+- أضف أرقاماً ورموزاً
+- تجنب المعلومات الشخصية
+- لا تستخدم كلمات من القاموس
 
-            **إدارة كلمات المرور:**
-            - استخدم مدير كلمات مرور موثوقاً
-            - فعّل المصادقة الثنائية
-            - لا تعيد استخدام كلمات المرور عبر المواقع
-            - غيّر كلمات المرور بعد الاختراقات الأمنية
-            """
+**إدارة كلمات المرور:**
+- استخدم مدير كلمات مرور موثوقاً
+- فعّل المصادقة الثنائية
+- لا تعيد استخدام كلمات المرور عبر المواقع
+- غيّر كلمات المرور بعد الاختراقات الأمنية
+"""
             )
 
         with st.expander(get_text("email_title")):
             st.markdown(
                 """
-            **تحديد محاولات التصيد:**
-            - تحقق من عناوين بريد المرسلين بعناية
-            - ابحث عن أخطاء إملائية ونحوية
-            - كن حذراً من اللغة العاجلة أو التهديدية
-            - مرر فوق الروابط لرؤية عناوين URL الفعلية
-            - لا تفتح المرفقات غير المتوقعة
-            """
+**تحديد محاولات التصيد:**
+- تحقق من عناوين بريد المرسلين بعناية
+- ابحث عن أخطاء إملائية ونحوية
+- كن حذراً من اللغة العاجلة أو التهديدية
+- مرر فوق الروابط لرؤية عناوين URL الفعلية
+- لا تفتح المرفقات غير المتوقعة
+"""
             )
 
         with st.expander(get_text("browsing_title")):
             st.markdown(
                 """
-            **التصفح الآمن:**
-            - ابحث دائماً عن HTTPS في عناوين URL
-            - حافظ على تحديث المتصفحات والإضافات
-            - استخدم مانعات الإعلانات ومضادات التتبع
-            - تجنب الواي فاي العام للأنشطة الحساسة
-            - امسح ملفات تعريف الارتباط بانتظام
-            """
+**التصفح الآمن:**
+- ابحث دائماً عن HTTPS في عناوين URL
+- حافظ على تحديث المتصفحات والإضافات
+- استخدم مانعات الإعلانات ومضادات التتبع
+- تجنب الواي فاي العام للأنشطة الحساسة
+- امسح ملفات تعريف الارتباط بانتظام
+"""
             )
 
         with st.expander(get_text("general_title")):
             st.markdown(
                 """
-            **أمان الأجهزة:**
-            - حافظ على تحديث أنظمة التشغيل
-            - ثبّت برامج مكافحة فيروسات موثوقة
-            - استخدم جدران الحماية
-            - احفظ نسخاً احتياطية من البيانات
+**أمان الأجهزة:**
+- حافظ على تحديث أنظمة التشغيل
+- ثبّت برامج مكافحة فيروسات موثوقة
+- استخدم جدران الحماية
+- احفظ نسخاً احتياطية من البيانات
 
-            **السلوك عبر الإنترنت:**
-            - كن حذراً مع المشاركة على وسائل التواصل
-            - راقب كشوف الحسابات المالية
-            - ابق مطلعاً على التهديدات الجديدة
-            """
+**السلوك عبر الإنترنت:**
+- كن حذراً مع المشاركة على وسائل التواصل
+- راقب كشوف الحسابات المالية
+- ابق مطلعاً على التهديدات الجديدة
+"""
             )
